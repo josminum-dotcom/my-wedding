@@ -49,6 +49,29 @@
     });
   }
 
+  /* ── Prevent Zoom (확대 방지) ── */
+  function initPreventZoom() {
+    // 1. 모바일 뷰포트 메타 태그를 동적으로 수정하여 핀치 줌 & 더블탭 확대 방지
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (viewportMeta) {
+      viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+    }
+
+    // 2. 데스크탑 웹 브라우저 확대 방지 (Ctrl + 마우스 휠)
+    document.addEventListener('wheel', function (e) {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // 3. 데스크탑 키보드 단축키 확대 방지 (Ctrl + '+', '-', '=')
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=')) {
+        e.preventDefault();
+      }
+    });
+  }
+
   /* ── Meta Tags ── */
   function initMeta() {
     document.title = CONFIG.meta.title;
@@ -355,15 +378,19 @@
     const track = $('#viewer-track');
     if (!viewer || !track || galleryImages.length === 0) return;
 
-    track.innerHTML = galleryImages
-      .map(
-        (src) => `
-      <div class="viewer__slide">
-        <img src="${src}" alt="" loading="lazy" />
-      </div>
-    `
-      )
-      .join('');
+    // 이미지가 아직 DOM에 렌더링되지 않았을 때 한 번만 그립니다.
+    // 기존의 loading="lazy" 속성은 가로 스크롤 환경에서 이미지가 안 나오는 버그를 유발하므로 제거했습니다.
+    if (track.children.length === 0) {
+      track.innerHTML = galleryImages
+        .map(
+          (src) => `
+        <div class="viewer__slide">
+          <img src="${src}" alt="" />
+        </div>
+      `
+        )
+        .join('');
+    }
 
     viewer.classList.add('is-active');
     viewer.setAttribute('aria-hidden', 'false');
@@ -680,6 +707,9 @@
 
   /* ── Init ── */
   async function init() {
+    // 확대 방지 적용
+    initPreventZoom();
+    
     // Synchronous inits (no image dependency)
     initMeta();
     initCurtain();
