@@ -48,7 +48,7 @@
     });
   }
 
-  /* ── Prevent Zoom (PC 웹 환경 키보드 확대 방지) ── */
+  /* ── Prevent Zoom ── */
   function initPreventZoom() {
     document.addEventListener('wheel', function (e) {
       if (e.ctrlKey) {
@@ -350,7 +350,6 @@
     const track = $('#viewer-track');
     if (!viewer || !track || galleryImages.length === 0) return;
 
-    // 모달 사진은 가로로 넘길 때 렌더링 오류가 나지 않도록 lazy 로딩 제거
     if (track.children.length === 0) {
       track.innerHTML = galleryImages
         .map(
@@ -395,6 +394,7 @@
     }
   }
 
+  /* 모달 터치 슬라이드 동작 시의 유연한 화면 폭 계산 보완 */
   function initViewer() {
     const viewer = $('#viewer');
     if (!viewer) return;
