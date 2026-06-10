@@ -300,12 +300,14 @@
     const viewer = $('#viewer');
     const track = $('#viewer-track');
 
-    // 뷰어 안에 이미지가 숨겨지지 않도록 lazy 옵션 완전 제거
     track.innerHTML = currentViewerImages.map(src => `<div class="viewer__slide"><img src="${src}" alt="" /></div>`).join('');
 
     viewer.classList.add('is-active');
     viewer.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    
+    // 강제 레이아웃 계산 (검은 화면 버그 원천 차단)
+    track.offsetHeight;
     goToSlide(viewerIdx, false);
   }
 
@@ -317,7 +319,7 @@
     document.body.style.overflow = '';
   }
 
-  // 모달 슬라이드 위치를 100vw(화면 너비 100%) 단위로 정확하게 계산하여 증발 버그 차단
+  // 모바일 기기별 픽셀 오차 방지를 위해 window.innerWidth 단위로 완벽하게 이동
   function goToSlide(idx, animate = true) {
     const track = $('#viewer-track');
     const counter = $('#viewer-counter');
@@ -331,8 +333,10 @@
     viewerIdx = idx;
 
     if (track) {
+      const slideWidth = window.innerWidth;
       track.style.transition = animate ? 'transform 0.3s ease' : 'none';
-      track.style.transform = `translateX(-${idx * 100}vw)`;
+      // 모바일 최적화를 위해 translate3d 적용
+      track.style.transform = `translate3d(-${idx * slideWidth}px, 0, 0)`;
     }
     
     if (counter) {
@@ -359,6 +363,11 @@
       if (e.key === 'ArrowRight') goToSlide(viewerIdx + 1);
     });
 
+    // 화면이 회전하거나 리사이즈 될 때 어긋난 위치 재조정
+    window.addEventListener('resize', () => {
+      if (viewer.classList.contains('is-active')) goToSlide(viewerIdx, false);
+    });
+
     const track = $('#viewer-track');
     if (!track) return;
 
@@ -369,11 +378,12 @@
       track.style.transition = 'none';
     }, { passive: true });
 
-    // 손가락으로 드래그할 때 화면 픽셀(px)과 화면 전체 단위(vw)를 혼합하여 안전하게 계산
     track.addEventListener('touchmove', (e) => {
       if (!isSwiping || currentViewerImages.length <= 1) return;
       touchDeltaX = e.touches[0].clientX - touchStartX;
-      track.style.transform = `translateX(calc(-${viewerIdx * 100}vw + ${touchDeltaX}px))`;
+      const slideWidth = window.innerWidth;
+      const offset = -(viewerIdx * slideWidth) + touchDeltaX;
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
     }, { passive: true });
 
     track.addEventListener('touchend', () => {
