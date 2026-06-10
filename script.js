@@ -14,7 +14,7 @@
     return String(n).padStart(2, '0');
   }
 
-  /* ── Image Auto-Detection (JPG, PNG, JPEG 모두 인식) ── */
+  /* ── Image Auto-Detection (PNG, JPG 대소문자 완벽 호환) ── */
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -22,14 +22,9 @@
         const images = [];
         let current = 1;
         let consecutiveFails = 0;
-
-        // 확장자별 이미지 로드 헬퍼 함수
-        const checkImage = (src) => new Promise((res, rej) => {
-            const i = new Image();
-            i.onload = () => res(src);
-            i.onerror = rej;
-            i.src = src;
-        });
+        
+        // 검색할 확장자 목록 (대소문자 모두 확인)
+        const exts = ['.jpg', '.png', '.jpeg', '.JPG', '.PNG', '.JPEG'];
 
         function tryNext() {
             if (current > maxAttempts || consecutiveFails >= 3) {
@@ -37,25 +32,31 @@
                 return;
             }
             
-            const pathJpg = `images/${folder}/${current}.jpg`;
-            const pathPng = `images/${folder}/${current}.png`;
-            const pathJpeg = `images/${folder}/${current}.jpeg`;
-
-            // jpg -> png -> jpeg 순서로 찾아보기
-            checkImage(pathJpg)
-              .catch(() => checkImage(pathPng))
-              .catch(() => checkImage(pathJpeg))
-              .then((validSrc) => {
-                  images.push(validSrc);
-                  consecutiveFails = 0;
-                  current++;
-                  tryNext();
-              })
-              .catch(() => {
-                  consecutiveFails++;
-                  current++;
-                  tryNext();
-              });
+            let extIdx = 0;
+            
+            function tryExt() {
+                if (extIdx >= exts.length) {
+                    consecutiveFails++;
+                    current++;
+                    tryNext();
+                    return;
+                }
+                const src = `images/${folder}/${current}${exts[extIdx]}`;
+                const i = new Image();
+                i.onload = () => {
+                    images.push(src);
+                    consecutiveFails = 0;
+                    current++;
+                    tryNext();
+                };
+                i.onerror = () => {
+                    extIdx++;
+                    tryExt();
+                };
+                i.src = src;
+            }
+            
+            tryExt();
         }
 
         tryNext();
@@ -80,7 +81,6 @@
     document.title = CONFIG.meta.title;
     const pt = $('#page-title');
     if (pt) pt.textContent = CONFIG.meta.title;
-    // OG Meta는 index.html에서 직접 작성한 값을 우선 사용하도록 둡니다.
   }
 
   /* ── Curtain ── */
@@ -116,7 +116,6 @@
 
     const img = $('#hero-img');
     if (img) {
-      // JPG, PNG 구분 없이 불러오기
       const heroImages = await loadImagesFromFolder('hero', 1);
       if (heroImages.length > 0) {
         img.src = heroImages[0];
@@ -294,7 +293,6 @@
   let touchDeltaX = 0;
   let isSwiping = false;
 
-  // 약도 등 다른 곳에서도 배열을 넘겨 재사용할 수 있도록 변경
   function openViewer(imagesArr, index) {
     if (!imagesArr || imagesArr.length === 0) return;
     currentViewerImages = imagesArr;
@@ -302,8 +300,8 @@
     const viewer = $('#viewer');
     const track = $('#viewer-track');
 
-    // 매번 트랙 안의 이미지들을 새로 렌더링 (잔여 버그 차단)
-    track.innerHTML = currentViewerImages.map(src => `<div class="viewer__slide"><img src="${src}" alt="" decoding="async" /></div>`).join('');
+    // 뷰어 안에 이미지가 숨겨지지 않도록 lazy 옵션 완전 제거
+    track.innerHTML = currentViewerImages.map(src => `<div class="viewer__slide"><img src="${src}" alt="" /></div>`).join('');
 
     viewer.classList.add('is-active');
     viewer.setAttribute('aria-hidden', 'false');
@@ -319,7 +317,7 @@
     document.body.style.overflow = '';
   }
 
-  // CSS % 의 브라우저 버그를 막기 위해 실제 픽셀(px) 단위로 정확히 슬라이드 계산
+  // 모달 슬라이드 위치를 100vw(화면 너비 100%) 단위로 정확하게 계산하여 증발 버그 차단
   function goToSlide(idx, animate = true) {
     const track = $('#viewer-track');
     const counter = $('#viewer-counter');
@@ -334,10 +332,9 @@
 
     if (track) {
       track.style.transition = animate ? 'transform 0.3s ease' : 'none';
-      track.style.transform = `translateX(-${idx * window.innerWidth}px)`;
+      track.style.transform = `translateX(-${idx * 100}vw)`;
     }
     
-    // 사진이 1장뿐이면 (약도 등) 화살표와 숫자 카운터 숨기기
     if (counter) {
       counter.style.display = total > 1 ? 'block' : 'none';
       counter.textContent = `${idx + 1} / ${total}`;
@@ -362,11 +359,6 @@
       if (e.key === 'ArrowRight') goToSlide(viewerIdx + 1);
     });
 
-    // 화면이 회전하거나 리사이즈 될 때 어긋난 위치 재조정
-    window.addEventListener('resize', () => {
-      if (viewer.classList.contains('is-active')) goToSlide(viewerIdx, false);
-    });
-
     const track = $('#viewer-track');
     if (!track) return;
 
@@ -377,11 +369,11 @@
       track.style.transition = 'none';
     }, { passive: true });
 
+    // 손가락으로 드래그할 때 화면 픽셀(px)과 화면 전체 단위(vw)를 혼합하여 안전하게 계산
     track.addEventListener('touchmove', (e) => {
-      if (!isSwiping || currentViewerImages.length <= 1) return; // 1장일땐 스와이프 금지
+      if (!isSwiping || currentViewerImages.length <= 1) return;
       touchDeltaX = e.touches[0].clientX - touchStartX;
-      const offset = -(viewerIdx * window.innerWidth) + touchDeltaX;
-      track.style.transform = `translateX(${offset}px)`;
+      track.style.transform = `translateX(calc(-${viewerIdx * 100}vw + ${touchDeltaX}px))`;
     }, { passive: true });
 
     track.addEventListener('touchend', () => {
@@ -409,11 +401,9 @@
     if (tel) tel.textContent = `Tel. ${w.tel}`;
 
     if (mapImg) {
-      // 약도 역시 JPG, PNG 자동 인식
       const locImages = await loadImagesFromFolder('location', 1);
       if (locImages.length > 0) {
         mapImg.src = locImages[0];
-        // 클릭 시 공용 모달 뷰어로 띄워주기
         mapImg.addEventListener('click', () => {
           openViewer([mapImg.src], 0);
         });
@@ -568,7 +558,6 @@
 
     setTimeout(initScrollAnimations, 200);
 
-    // 이미지 스캔이 필요한 섹션들 동시 로딩
     await Promise.all([
       initHero(),
       initLocation(),
