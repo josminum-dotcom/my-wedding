@@ -14,7 +14,7 @@
     return String(n).padStart(2, '0');
   }
 
-  /* ── Image Auto-Detection (PNG 스캔 제거, JPG 전용으로 로딩 속도 최적화) ── */
+  /* ── Image Auto-Detection (JPG 전용으로 로딩 속도 최적화 유지) ── */
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -48,8 +48,9 @@
     });
   }
 
-  /* ── Prevent Zoom ── */
+  /* ── Prevent Zoom (모바일 터치 줌 완벽 차단 추가) ── */
   function initPreventZoom() {
+    // 1. 데스크탑 휠/키보드 줌 방지
     document.addEventListener('wheel', function (e) {
       if (e.ctrlKey) e.preventDefault();
     }, { passive: false });
@@ -59,6 +60,29 @@
         e.preventDefault();
       }
     });
+
+    // 2. 모바일 핀치 줌(두 손가락 확대) 방지
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function (e) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // 3. 모바일 더블 탭(두 번 터치) 줌 방지
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (e) {
+      const now = (new Date()).getTime();
+      if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
   }
 
   /* ── Meta Tags ── */
@@ -303,7 +327,6 @@
     document.body.style.overflow = '';
   }
 
-  // vw (화면 너비 100%) 기준으로만 정확히 움직이게 하여 엉뚱한 이미지 나오는 버그 차단
   function goToSlide(idx, animate = true) {
     const track = $('#viewer-track');
     const counter = $('#viewer-counter');
