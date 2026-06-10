@@ -15,7 +15,6 @@
   }
 
   /* ── Image Auto-Detection ── */
-  // Discovered images stored here for use across functions
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -49,9 +48,8 @@
     });
   }
 
-  /* ── Prevent Zoom (뷰어 내부 약도/사진은 확대 허용) ── */
+  /* ── Prevent Zoom ── */
   function initPreventZoom() {
-    // 1. 데스크탑 휠/키보드 확대 방지 (뷰어 내부는 허용)
     document.addEventListener('wheel', function (e) {
       if (e.ctrlKey && !e.target.closest('.viewer')) {
         e.preventDefault();
@@ -64,7 +62,6 @@
       }
     });
 
-    // 2. 모바일 핀치 줌(두 손가락 확대) 방지 (뷰어 내부는 허용)
     document.addEventListener('touchstart', function (e) {
       if (e.touches.length > 1 && !e.target.closest('.viewer')) {
         e.preventDefault();
@@ -77,7 +74,6 @@
       }
     }, { passive: false });
 
-    // 3. 모바일 더블 탭 확대 방지 (뷰어 내부는 허용)
     let lastTouchEnd = 0;
     document.addEventListener('touchend', function (e) {
       const now = (new Date()).getTime();
@@ -91,12 +87,6 @@
   /* ── Meta Tags ── */
   function initMeta() {
     document.title = CONFIG.meta.title;
-    const t = $('#og-title');
-    const d = $('#og-description');
-    const i = $('#og-image');
-    if (t) t.setAttribute('content', CONFIG.meta.title);
-    if (d) d.setAttribute('content', CONFIG.meta.description);
-    if (i) i.setAttribute('content', 'images/og/1.jpg');
     const pt = $('#page-title');
     if (pt) pt.textContent = CONFIG.meta.title;
   }
@@ -105,17 +95,14 @@
   function initCurtain() {
     const curtain = $('#curtain');
 
-    // If useCurtain is false, skip the curtain entirely
     if (CONFIG.useCurtain === false) {
       if (curtain) {
         curtain.style.display = 'none';
       }
-      // Start petals immediately since there's no curtain to open
       initPetals();
       return;
     }
 
-    // Default behaviour (useCurtain is true or undefined for backwards compat)
     const names = $('#curtain-names');
     const btn = $('#curtain-open');
     if (names) {
@@ -257,7 +244,6 @@
     html += '</div>';
     el.innerHTML = html;
 
-    // Google Calendar
     const gBtn = $('#btn-google-cal');
     if (gBtn) {
       gBtn.addEventListener('click', () => {
@@ -277,7 +263,6 @@
       });
     }
 
-    // Apple Calendar (.ics)
     const iBtn = $('#btn-ics-cal');
     if (iBtn) {
       iBtn.addEventListener('click', () => {
@@ -311,7 +296,7 @@
     }
   }
 
-  /* ── Story (async — waits for image discovery) ── */
+  /* ── Story ── */
   async function initStory() {
     const title = $('#story-title');
     const text = $('#story-text');
@@ -322,7 +307,6 @@
 
     if (!container) return;
 
-    // Show loading placeholder
     container.innerHTML = '<div class="section-loading"><span class="section-loading__dot"></span><span class="section-loading__dot"></span><span class="section-loading__dot"></span></div>';
 
     const storyImages = await loadImagesFromFolder('story');
@@ -337,26 +321,23 @@
       `
         )
         .join('');
-      // Re-observe new elements for scroll animations
       observeNewElements(container);
     } else {
       container.innerHTML = '';
     }
   }
 
-  /* ── Gallery (async — waits for image discovery) ── */
+  /* ── Gallery ── */
   async function initGallery() {
     const grid = $('#gallery-grid');
     const section = $('#gallery');
     if (!grid) return;
 
-    // Show loading placeholder
     grid.innerHTML = '<div class="section-loading"><span class="section-loading__dot"></span><span class="section-loading__dot"></span><span class="section-loading__dot"></span></div>';
 
     galleryImages = await loadImagesFromFolder('gallery');
 
     if (galleryImages.length === 0) {
-      // Hide entire gallery section if no images found
       if (section) section.style.display = 'none';
       return;
     }
@@ -378,11 +359,10 @@
       }
     });
 
-    // Re-observe new elements for scroll animations
     observeNewElements(grid);
   }
 
-  /* ── Photo Viewer ── */
+  /* ── Photo Viewer (갤러리 단위 퍼센트(%) 통일로 실종 버그 해결) ── */
   let viewerIdx = 0;
   let touchStartX = 0;
   let touchDeltaX = 0;
@@ -445,7 +425,6 @@
     $('#viewer-prev')?.addEventListener('click', () => goToSlide(viewerIdx - 1));
     $('#viewer-next')?.addEventListener('click', () => goToSlide(viewerIdx + 1));
 
-    // Keyboard
     document.addEventListener('keydown', (e) => {
       if (!viewer.classList.contains('is-active')) return;
       if (e.key === 'Escape') closeViewer();
@@ -453,7 +432,6 @@
       if (e.key === 'ArrowRight') goToSlide(viewerIdx + 1);
     });
 
-    // Touch/Swipe
     const track = $('#viewer-track');
     if (!track) return;
 
@@ -467,8 +445,10 @@
     track.addEventListener('touchmove', (e) => {
       if (!isSwiping) return;
       touchDeltaX = e.touches[0].clientX - touchStartX;
-      const offset = -(viewerIdx * window.innerWidth) + touchDeltaX;
-      track.style.transform = `translateX(${offset}px)`;
+      // 스와이프 계산도 px가 아닌 %로 통일하여 이미지 어긋남 원천 차단
+      const percentX = (touchDeltaX / window.innerWidth) * 100;
+      const offset = -(viewerIdx * 100) + percentX;
+      track.style.transform = `translateX(${offset}%)`;
     }, { passive: true });
 
     track.addEventListener('touchend', () => {
@@ -485,7 +465,7 @@
     });
   }
 
-  /* ── Location ── */
+  /* ── Location (약도 뷰어 클릭 제거) ── */
   function initLocation() {
     const w = CONFIG.wedding;
     const venue = $('#loc-venue');
@@ -499,38 +479,9 @@
     if (addr) addr.textContent = w.address;
     if (tel) tel.textContent = `Tel. ${w.tel}`;
     
-    // 약도 이미지 로드 및 뷰어 연결 추가
+    // 약도 클릭시 모달이 뜨는 기능 삭제. 이미지 로드만 유지
     if (mapImg) {
       mapImg.src = 'images/location/1.jpg';
-      mapImg.style.cursor = 'pointer';
-      
-      mapImg.addEventListener('click', () => {
-        // 기존 viewer 재사용
-        const viewer = $('#viewer');
-        const track = $('#viewer-track');
-        const counter = $('#viewer-counter');
-        const prev = $('#viewer-prev');
-        const next = $('#viewer-next');
-        
-        if (!viewer || !track) return;
-
-        track.innerHTML = `
-          <div class="viewer__slide">
-            <img src="${mapImg.src}" alt="약도 크게 보기" loading="lazy" />
-          </div>
-        `;
-        
-        track.style.transition = 'none';
-        track.style.transform = `translateX(0)`;
-
-        if (counter) counter.style.display = 'none';
-        if (prev) prev.style.display = 'none';
-        if (next) next.style.display = 'none';
-
-        viewer.classList.add('is-active');
-        viewer.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-      });
     }
 
     const kakao = $('#btn-kakao-map');
@@ -558,7 +509,6 @@
       brideBody.innerHTML = renderAccounts(CONFIG.accounts.bride);
     }
 
-    // Accordion toggle
     $$('.accordion__toggle').forEach((btn) => {
       btn.addEventListener('click', () => {
         const acc = btn.closest('.accordion');
@@ -566,7 +516,6 @@
       });
     });
 
-    // Copy account
     document.addEventListener('click', (e) => {
       const copyBtn = e.target.closest('.account-item__copy');
       if (copyBtn) {
@@ -637,7 +586,7 @@
     document.body.removeChild(ta);
   }
 
-  /* ── Scroll Animations (IntersectionObserver) ── */
+  /* ── Scroll Animations ── */
   let scrollObserver = null;
 
   function initScrollAnimations() {
@@ -659,7 +608,6 @@
     targets.forEach((el) => scrollObserver.observe(el));
   }
 
-  // Re-observe dynamically added elements after async image loading
   function observeNewElements(container) {
     if (!scrollObserver) return;
     const targets = $$('.gallery__item, .story__img-card', container);
@@ -711,7 +659,6 @@
       ctx.globalAlpha = p.opacity;
       ctx.fillStyle = p.color;
 
-      // Petal shape
       ctx.beginPath();
       const s = p.size;
       ctx.moveTo(0, 0);
@@ -752,9 +699,7 @@
 
   /* ── Init ── */
   async function init() {
-    initPreventZoom(); // 모바일 강제 확대 방지 (뷰어 내부는 허용) 실행
-
-    // Synchronous inits (no image dependency)
+    initPreventZoom(); 
     initMeta();
     initCurtain();
     initHero();
@@ -765,10 +710,8 @@
     initLocation();
     initAccount();
 
-    // Delay scroll animations so they don't fire during curtain
     setTimeout(initScrollAnimations, 200);
 
-    // Async inits (discover images, then render)
     await Promise.all([
       initStory(),
       initGallery(),
