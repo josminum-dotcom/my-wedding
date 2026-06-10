@@ -14,7 +14,7 @@
     return String(n).padStart(2, '0');
   }
 
-  /* ── Image Auto-Detection (PNG, JPG 대소문자 완벽 호환) ── */
+  /* ── Image Auto-Detection (PNG 스캔 제거, JPG 전용으로 로딩 속도 최적화) ── */
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -22,41 +22,26 @@
         const images = [];
         let current = 1;
         let consecutiveFails = 0;
-        
-        // 검색할 확장자 목록 (대소문자 모두 확인)
-        const exts = ['.jpg', '.png', '.jpeg', '.JPG', '.PNG', '.JPEG'];
 
         function tryNext() {
             if (current > maxAttempts || consecutiveFails >= 3) {
                 resolve(images);
                 return;
             }
-            
-            let extIdx = 0;
-            
-            function tryExt() {
-                if (extIdx >= exts.length) {
-                    consecutiveFails++;
-                    current++;
-                    tryNext();
-                    return;
-                }
-                const src = `images/${folder}/${current}${exts[extIdx]}`;
-                const i = new Image();
-                i.onload = () => {
-                    images.push(src);
-                    consecutiveFails = 0;
-                    current++;
-                    tryNext();
-                };
-                i.onerror = () => {
-                    extIdx++;
-                    tryExt();
-                };
-                i.src = src;
-            }
-            
-            tryExt();
+            const img = new Image();
+            const path = `images/${folder}/${current}.jpg`;
+            img.onload = function() {
+                images.push(path);
+                consecutiveFails = 0;
+                current++;
+                tryNext();
+            };
+            img.onerror = function() {
+                consecutiveFails++;
+                current++;
+                tryNext();
+            };
+            img.src = path;
         }
 
         tryNext();
@@ -306,7 +291,6 @@
     viewer.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     
-    // 강제 레이아웃 계산 (검은 화면 버그 원천 차단)
     track.offsetHeight;
     goToSlide(viewerIdx, false);
   }
@@ -319,7 +303,7 @@
     document.body.style.overflow = '';
   }
 
-  // 모바일 기기별 픽셀 오차 방지를 위해 window.innerWidth 단위로 완벽하게 이동
+  // vw (화면 너비 100%) 기준으로만 정확히 움직이게 하여 엉뚱한 이미지 나오는 버그 차단
   function goToSlide(idx, animate = true) {
     const track = $('#viewer-track');
     const counter = $('#viewer-counter');
@@ -333,10 +317,8 @@
     viewerIdx = idx;
 
     if (track) {
-      const slideWidth = window.innerWidth;
       track.style.transition = animate ? 'transform 0.3s ease' : 'none';
-      // 모바일 최적화를 위해 translate3d 적용
-      track.style.transform = `translate3d(-${idx * slideWidth}px, 0, 0)`;
+      track.style.transform = `translate3d(-${idx * 100}vw, 0, 0)`;
     }
     
     if (counter) {
@@ -363,7 +345,6 @@
       if (e.key === 'ArrowRight') goToSlide(viewerIdx + 1);
     });
 
-    // 화면이 회전하거나 리사이즈 될 때 어긋난 위치 재조정
     window.addEventListener('resize', () => {
       if (viewer.classList.contains('is-active')) goToSlide(viewerIdx, false);
     });
@@ -381,9 +362,7 @@
     track.addEventListener('touchmove', (e) => {
       if (!isSwiping || currentViewerImages.length <= 1) return;
       touchDeltaX = e.touches[0].clientX - touchStartX;
-      const slideWidth = window.innerWidth;
-      const offset = -(viewerIdx * slideWidth) + touchDeltaX;
-      track.style.transform = `translate3d(${offset}px, 0, 0)`;
+      track.style.transform = `translate3d(calc(-${viewerIdx * 100}vw + ${touchDeltaX}px), 0, 0)`;
     }, { passive: true });
 
     track.addEventListener('touchend', () => {
