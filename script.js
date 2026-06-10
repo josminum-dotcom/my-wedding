@@ -14,7 +14,8 @@
     return String(n).padStart(2, '0');
   }
 
-  /* ── Image Auto-Detection (JPG 전용으로 로딩 속도 최적화 유지) ── */
+  /* ── Image Auto-Detection ── */
+  // Discovered images stored here for use across functions
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -48,11 +49,13 @@
     });
   }
 
-  /* ── Prevent Zoom (모바일 터치 줌 완벽 차단 추가) ── */
+  /* ── Prevent Zoom (뷰어 내부 약도/사진은 확대 허용) ── */
   function initPreventZoom() {
-    // 1. 데스크탑 휠/키보드 줌 방지
+    // 1. 데스크탑 휠/키보드 확대 방지 (뷰어 내부는 허용)
     document.addEventListener('wheel', function (e) {
-      if (e.ctrlKey) e.preventDefault();
+      if (e.ctrlKey && !e.target.closest('.viewer')) {
+        e.preventDefault();
+      }
     }, { passive: false });
 
     document.addEventListener('keydown', function (e) {
@@ -61,24 +64,24 @@
       }
     });
 
-    // 2. 모바일 핀치 줌(두 손가락 확대) 방지
+    // 2. 모바일 핀치 줌(두 손가락 확대) 방지 (뷰어 내부는 허용)
     document.addEventListener('touchstart', function (e) {
-      if (e.touches.length > 1) {
+      if (e.touches.length > 1 && !e.target.closest('.viewer')) {
         e.preventDefault();
       }
     }, { passive: false });
 
     document.addEventListener('touchmove', function (e) {
-      if (e.touches.length > 1) {
+      if (e.touches.length > 1 && !e.target.closest('.viewer')) {
         e.preventDefault();
       }
     }, { passive: false });
 
-    // 3. 모바일 더블 탭(두 번 터치) 줌 방지
+    // 3. 모바일 더블 탭 확대 방지 (뷰어 내부는 허용)
     let lastTouchEnd = 0;
     document.addEventListener('touchend', function (e) {
       const now = (new Date()).getTime();
-      if (now - lastTouchEnd <= 300) {
+      if (now - lastTouchEnd <= 300 && !e.target.closest('.viewer')) {
         e.preventDefault();
       }
       lastTouchEnd = now;
@@ -88,6 +91,12 @@
   /* ── Meta Tags ── */
   function initMeta() {
     document.title = CONFIG.meta.title;
+    const t = $('#og-title');
+    const d = $('#og-description');
+    const i = $('#og-image');
+    if (t) t.setAttribute('content', CONFIG.meta.title);
+    if (d) d.setAttribute('content', CONFIG.meta.description);
+    if (i) i.setAttribute('content', 'images/og/1.jpg');
     const pt = $('#page-title');
     if (pt) pt.textContent = CONFIG.meta.title;
   }
@@ -95,15 +104,23 @@
   /* ── Curtain ── */
   function initCurtain() {
     const curtain = $('#curtain');
+
+    // If useCurtain is false, skip the curtain entirely
     if (CONFIG.useCurtain === false) {
-      if (curtain) curtain.style.display = 'none';
+      if (curtain) {
+        curtain.style.display = 'none';
+      }
+      // Start petals immediately since there's no curtain to open
       initPetals();
       return;
     }
+
+    // Default behaviour (useCurtain is true or undefined for backwards compat)
     const names = $('#curtain-names');
     const btn = $('#curtain-open');
     if (names) {
-      names.textContent = CONFIG.groom.fullName + ' & ' + CONFIG.bride.fullName;
+      names.textContent =
+        CONFIG.groom.fullName + ' & ' + CONFIG.bride.fullName;
     }
     if (btn) {
       btn.addEventListener('click', () => {
@@ -117,18 +134,16 @@
   }
 
   /* ── Hero ── */
-  async function initHero() {
+  function initHero() {
+    const img = $('#hero-img');
+    if (img) img.src = 'images/hero/1.jpg';
+
     const names = $('#hero-names');
     if (names) {
-      names.innerHTML = CONFIG.groom.fullName + ' <span class="ampersand">&amp;</span> ' + CONFIG.bride.fullName;
-    }
-
-    const img = $('#hero-img');
-    if (img) {
-      const heroImages = await loadImagesFromFolder('hero', 1);
-      if (heroImages.length > 0) {
-        img.src = heroImages[0];
-      }
+      names.innerHTML =
+        CONFIG.groom.fullName +
+        ' <span class="ampersand">&amp;</span> ' +
+        CONFIG.bride.fullName;
     }
 
     const w = CONFIG.wedding;
@@ -138,7 +153,9 @@
     const h12 = +hh % 12 || 12;
 
     const dateEl = $('#hero-date');
-    if (dateEl) dateEl.textContent = `${y}년 ${+m}월 ${+d}일 ${w.dayOfWeek} ${ampm} ${h12}시${+mm ? ' ' + +mm + '분' : ''}`;
+    if (dateEl) {
+      dateEl.textContent = `${y}년 ${+m}월 ${+d}일 ${w.dayOfWeek} ${ampm} ${h12}시${+mm ? ' ' + +mm + '분' : ''}`;
+    }
 
     const venue = $('#hero-venue');
     if (venue) venue.textContent = w.venue;
@@ -156,15 +173,19 @@
       let diff = target - now;
       if (diff < 0) diff = 0;
 
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
       const dEl = $('#cd-days');
       const hEl = $('#cd-hours');
       const mEl = $('#cd-minutes');
       const sEl = $('#cd-seconds');
-      
-      if (dEl) dEl.textContent = Math.floor(diff / (1000 * 60 * 60 * 24));
-      if (hEl) hEl.textContent = padZero(Math.floor((diff / (1000 * 60 * 60)) % 24));
-      if (mEl) mEl.textContent = padZero(Math.floor((diff / (1000 * 60)) % 60));
-      if (sEl) sEl.textContent = padZero(Math.floor((diff / 1000) % 60));
+      if (dEl) dEl.textContent = days;
+      if (hEl) hEl.textContent = padZero(hours);
+      if (mEl) mEl.textContent = padZero(minutes);
+      if (sEl) sEl.textContent = padZero(seconds);
     }
 
     update();
@@ -183,7 +204,12 @@
     if (parents) {
       const g = CONFIG.groom;
       const b = CONFIG.bride;
-      const makeName = (cfg, isDeceased) => isDeceased ? `<span class="deceased">${cfg}</span>` : cfg;
+
+      const makeName = (cfg, isDeceased) => {
+        return isDeceased
+          ? `<span class="deceased">${cfg}</span>`
+          : cfg;
+      };
 
       parents.innerHTML = `
         <span class="parent-line">
@@ -208,17 +234,30 @@
     const first = new Date(y, m - 1, 1);
     const lastDay = new Date(y, m, 0).getDate();
     const startDow = first.getDay();
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    let html = `<div class="calendar__header">${monthNames[m - 1]} ${y}</div><div class="calendar__weekdays">`;
-    ['일', '월', '화', '수', '목', '금', '토'].forEach(wd => html += `<span class="calendar__weekday">${wd}</span>`);
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+
+    let html = `<div class="calendar__header">${monthNames[m - 1]} ${y}</div>`;
+    html += '<div class="calendar__weekdays">';
+    ['일', '월', '화', '수', '목', '금', '토'].forEach((wd) => {
+      html += `<span class="calendar__weekday">${wd}</span>`;
+    });
     html += '</div><div class="calendar__days">';
 
-    for (let i = 0; i < startDow; i++) html += '<span class="calendar__day is-empty"></span>';
-    for (let day = 1; day <= lastDay; day++) html += `<span class="calendar__day${day === d ? ' is-today' : ''}">${day}</span>`;
+    for (let i = 0; i < startDow; i++) {
+      html += '<span class="calendar__day is-empty"></span>';
+    }
+    for (let day = 1; day <= lastDay; day++) {
+      const cls = day === d ? ' is-today' : '';
+      html += `<span class="calendar__day${cls}">${day}</span>`;
+    }
     html += '</div>';
     el.innerHTML = html;
 
+    // Google Calendar
     const gBtn = $('#btn-google-cal');
     if (gBtn) {
       gBtn.addEventListener('click', () => {
@@ -226,11 +265,19 @@
         const [yy, mm2, dd] = w.date.split('-');
         const [th, tm] = w.time.split(':');
         const start = `${yy}${mm2}${dd}T${th}${tm}00`;
-        const end = `${yy}${mm2}${dd}T${padZero(+th + 2)}${tm}00`;
-        window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(CONFIG.meta.title)}&dates=${start}/${end}&location=${encodeURIComponent(w.venue + ' ' + w.address)}`, '_blank');
+        const endH = padZero(+th + 2);
+        const end = `${yy}${mm2}${dd}T${endH}${tm}00`;
+        const url =
+          `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+          `&text=${encodeURIComponent(CONFIG.meta.title)}` +
+          `&dates=${start}/${end}` +
+          `&location=${encodeURIComponent(w.venue + ' ' + w.address)}` +
+          `&details=${encodeURIComponent(CONFIG.meta.description)}`;
+        window.open(url, '_blank');
       });
     }
 
+    // Apple Calendar (.ics)
     const iBtn = $('#btn-ics-cal');
     if (iBtn) {
       iBtn.addEventListener('click', () => {
@@ -238,8 +285,22 @@
         const [yy, mm2, dd] = w.date.split('-');
         const [th, tm] = w.time.split(':');
         const start = `${yy}${mm2}${dd}T${th}${tm}00`;
-        const end = `${yy}${mm2}${dd}T${padZero(+th + 2)}${tm}00`;
-        const ics = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${CONFIG.meta.title}\r\nLOCATION:${w.venue} ${w.address}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+        const endH = padZero(+th + 2);
+        const end = `${yy}${mm2}${dd}T${endH}${tm}00`;
+        const ics = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//WeddingInvitation//EN',
+          'BEGIN:VEVENT',
+          `DTSTART:${start}`,
+          `DTEND:${end}`,
+          `SUMMARY:${CONFIG.meta.title}`,
+          `LOCATION:${w.venue} ${w.address}`,
+          `DESCRIPTION:${CONFIG.meta.description}`,
+          'END:VEVENT',
+          'END:VCALENDAR',
+        ].join('\r\n');
+
         const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
@@ -250,7 +311,7 @@
     }
   }
 
-  /* ── Story ── */
+  /* ── Story (async — waits for image discovery) ── */
   async function initStory() {
     const title = $('#story-title');
     const text = $('#story-text');
@@ -258,64 +319,94 @@
 
     if (title) title.textContent = CONFIG.story.title;
     if (text) text.textContent = CONFIG.story.content;
+
     if (!container) return;
 
+    // Show loading placeholder
     container.innerHTML = '<div class="section-loading"><span class="section-loading__dot"></span><span class="section-loading__dot"></span><span class="section-loading__dot"></span></div>';
+
     const storyImages = await loadImagesFromFolder('story');
 
     if (storyImages.length > 0) {
-      container.innerHTML = storyImages.map(src => `<div class="story__img-card anim-scale-target"><img src="${src}" alt="우리의 이야기" loading="lazy" decoding="async" /></div>`).join('');
+      container.innerHTML = storyImages
+        .map(
+          (src) => `
+        <div class="story__img-card anim-scale-target">
+          <img src="${src}" alt="우리의 이야기" loading="lazy" />
+        </div>
+      `
+        )
+        .join('');
+      // Re-observe new elements for scroll animations
       observeNewElements(container);
     } else {
       container.innerHTML = '';
     }
   }
 
-  /* ── Gallery ── */
+  /* ── Gallery (async — waits for image discovery) ── */
   async function initGallery() {
     const grid = $('#gallery-grid');
     const section = $('#gallery');
     if (!grid) return;
 
+    // Show loading placeholder
     grid.innerHTML = '<div class="section-loading"><span class="section-loading__dot"></span><span class="section-loading__dot"></span><span class="section-loading__dot"></span></div>';
+
     galleryImages = await loadImagesFromFolder('gallery');
 
     if (galleryImages.length === 0) {
+      // Hide entire gallery section if no images found
       if (section) section.style.display = 'none';
       return;
     }
 
-    grid.innerHTML = galleryImages.map((src, i) => `<div class="gallery__item" data-index="${i}"><img src="${src}" alt="갤러리 사진 ${i + 1}" loading="lazy" decoding="async" /></div>`).join('');
+    grid.innerHTML = galleryImages
+      .map(
+        (src, i) => `
+      <div class="gallery__item" data-index="${i}">
+        <img src="${src}" alt="갤러리 사진 ${i + 1}" loading="lazy" />
+      </div>
+    `
+      )
+      .join('');
 
     grid.addEventListener('click', (e) => {
       const item = e.target.closest('.gallery__item');
-      if (item) openViewer(galleryImages, +item.dataset.index);
+      if (item) {
+        openViewer(+item.dataset.index);
+      }
     });
 
+    // Re-observe new elements for scroll animations
     observeNewElements(grid);
   }
 
-  /* ── Photo Viewer (공용 모달 뷰어) ── */
-  let currentViewerImages = [];
+  /* ── Photo Viewer ── */
   let viewerIdx = 0;
   let touchStartX = 0;
   let touchDeltaX = 0;
   let isSwiping = false;
 
-  function openViewer(imagesArr, index) {
-    if (!imagesArr || imagesArr.length === 0) return;
-    currentViewerImages = imagesArr;
+  function openViewer(index) {
     viewerIdx = index;
     const viewer = $('#viewer');
     const track = $('#viewer-track');
+    if (!viewer || !track || galleryImages.length === 0) return;
 
-    track.innerHTML = currentViewerImages.map(src => `<div class="viewer__slide"><img src="${src}" alt="" /></div>`).join('');
+    track.innerHTML = galleryImages
+      .map(
+        (src) => `
+      <div class="viewer__slide">
+        <img src="${src}" alt="" loading="lazy" />
+      </div>
+    `
+      )
+      .join('');
 
     viewer.classList.add('is-active');
     viewer.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    
-    track.offsetHeight;
     goToSlide(viewerIdx, false);
   }
 
@@ -330,10 +421,7 @@
   function goToSlide(idx, animate = true) {
     const track = $('#viewer-track');
     const counter = $('#viewer-counter');
-    const prev = $('#viewer-prev');
-    const next = $('#viewer-next');
-    const total = currentViewerImages.length;
-    
+    const total = galleryImages.length;
     if (total === 0) return;
     if (idx < 0) idx = 0;
     if (idx >= total) idx = total - 1;
@@ -341,15 +429,11 @@
 
     if (track) {
       track.style.transition = animate ? 'transform 0.3s ease' : 'none';
-      track.style.transform = `translate3d(-${idx * 100}vw, 0, 0)`;
+      track.style.transform = `translateX(-${idx * 100}%)`;
     }
-    
     if (counter) {
-      counter.style.display = total > 1 ? 'block' : 'none';
       counter.textContent = `${idx + 1} / ${total}`;
     }
-    if (prev) prev.style.display = total > 1 ? 'flex' : 'none';
-    if (next) next.style.display = total > 1 ? 'flex' : 'none';
   }
 
   function initViewer() {
@@ -361,6 +445,7 @@
     $('#viewer-prev')?.addEventListener('click', () => goToSlide(viewerIdx - 1));
     $('#viewer-next')?.addEventListener('click', () => goToSlide(viewerIdx + 1));
 
+    // Keyboard
     document.addEventListener('keydown', (e) => {
       if (!viewer.classList.contains('is-active')) return;
       if (e.key === 'Escape') closeViewer();
@@ -368,10 +453,7 @@
       if (e.key === 'ArrowRight') goToSlide(viewerIdx + 1);
     });
 
-    window.addEventListener('resize', () => {
-      if (viewer.classList.contains('is-active')) goToSlide(viewerIdx, false);
-    });
-
+    // Touch/Swipe
     const track = $('#viewer-track');
     if (!track) return;
 
@@ -383,23 +465,28 @@
     }, { passive: true });
 
     track.addEventListener('touchmove', (e) => {
-      if (!isSwiping || currentViewerImages.length <= 1) return;
+      if (!isSwiping) return;
       touchDeltaX = e.touches[0].clientX - touchStartX;
-      track.style.transform = `translate3d(calc(-${viewerIdx * 100}vw + ${touchDeltaX}px), 0, 0)`;
+      const offset = -(viewerIdx * window.innerWidth) + touchDeltaX;
+      track.style.transform = `translateX(${offset}px)`;
     }, { passive: true });
 
     track.addEventListener('touchend', () => {
-      if (!isSwiping || currentViewerImages.length <= 1) return;
+      if (!isSwiping) return;
       isSwiping = false;
       const threshold = window.innerWidth * 0.2;
-      if (touchDeltaX < -threshold) goToSlide(viewerIdx + 1);
-      else if (touchDeltaX > threshold) goToSlide(viewerIdx - 1);
-      else goToSlide(viewerIdx);
+      if (touchDeltaX < -threshold) {
+        goToSlide(viewerIdx + 1);
+      } else if (touchDeltaX > threshold) {
+        goToSlide(viewerIdx - 1);
+      } else {
+        goToSlide(viewerIdx);
+      }
     });
   }
 
   /* ── Location ── */
-  async function initLocation() {
+  function initLocation() {
     const w = CONFIG.wedding;
     const venue = $('#loc-venue');
     const hall = $('#loc-hall');
@@ -411,15 +498,39 @@
     if (hall) hall.textContent = w.hall;
     if (addr) addr.textContent = w.address;
     if (tel) tel.textContent = `Tel. ${w.tel}`;
-
+    
+    // 약도 이미지 로드 및 뷰어 연결 추가
     if (mapImg) {
-      const locImages = await loadImagesFromFolder('location', 1);
-      if (locImages.length > 0) {
-        mapImg.src = locImages[0];
-        mapImg.addEventListener('click', () => {
-          openViewer([mapImg.src], 0);
-        });
-      }
+      mapImg.src = 'images/location/1.jpg';
+      mapImg.style.cursor = 'pointer';
+      
+      mapImg.addEventListener('click', () => {
+        // 기존 viewer 재사용
+        const viewer = $('#viewer');
+        const track = $('#viewer-track');
+        const counter = $('#viewer-counter');
+        const prev = $('#viewer-prev');
+        const next = $('#viewer-next');
+        
+        if (!viewer || !track) return;
+
+        track.innerHTML = `
+          <div class="viewer__slide">
+            <img src="${mapImg.src}" alt="약도 크게 보기" loading="lazy" />
+          </div>
+        `;
+        
+        track.style.transition = 'none';
+        track.style.transform = `translateX(0)`;
+
+        if (counter) counter.style.display = 'none';
+        if (prev) prev.style.display = 'none';
+        if (next) next.style.display = 'none';
+
+        viewer.classList.add('is-active');
+        viewer.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      });
     }
 
     const kakao = $('#btn-kakao-map');
@@ -440,32 +551,51 @@
     const groomBody = $('#acc-groom-body');
     const brideBody = $('#acc-bride-body');
 
-    if (groomBody) groomBody.innerHTML = renderAccounts(CONFIG.accounts.groom);
-    if (brideBody) brideBody.innerHTML = renderAccounts(CONFIG.accounts.bride);
+    if (groomBody) {
+      groomBody.innerHTML = renderAccounts(CONFIG.accounts.groom);
+    }
+    if (brideBody) {
+      brideBody.innerHTML = renderAccounts(CONFIG.accounts.bride);
+    }
 
+    // Accordion toggle
     $$('.accordion__toggle').forEach((btn) => {
-      btn.addEventListener('click', () => btn.closest('.accordion').classList.toggle('is-open'));
+      btn.addEventListener('click', () => {
+        const acc = btn.closest('.accordion');
+        acc.classList.toggle('is-open');
+      });
     });
 
+    // Copy account
     document.addEventListener('click', (e) => {
       const copyBtn = e.target.closest('.account-item__copy');
-      if (copyBtn) copyToClipboard(copyBtn.dataset.account, '계좌번호가 복사되었습니다');
+      if (copyBtn) {
+        const account = copyBtn.dataset.account;
+        copyToClipboard(account, '계좌번호가 복사되었습니다');
+      }
     });
   }
 
   function renderAccounts(accounts) {
-    return accounts.map(acc => `
+    return accounts
+      .map(
+        (acc) => `
       <div class="account-item">
         <div class="account-item__info">
           <p class="account-item__role">${acc.role}</p>
-          <p class="account-item__detail"><span class="account-item__name">${acc.name}</span> ${acc.bank} ${acc.number}</p>
+          <p class="account-item__detail">
+            <span class="account-item__name">${acc.name}</span>
+            ${acc.bank} ${acc.number}
+          </p>
         </div>
         <button class="account-item__copy" data-account="${acc.bank} ${acc.number} ${acc.name}">복사</button>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
   }
 
-  /* ── Toast & Clipboard ── */
+  /* ── Toast ── */
   let toastTimer = null;
   function showToast(msg) {
     const toast = $('#toast');
@@ -473,12 +603,19 @@
     toast.textContent = msg;
     toast.classList.add('is-visible');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2200);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('is-visible');
+    }, 2200);
   }
 
+  /* ── Clipboard ── */
   function copyToClipboard(text, toastMsg) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => showToast(toastMsg)).catch(() => fallbackCopy(text, toastMsg));
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(toastMsg);
+      }).catch(() => {
+        fallbackCopy(text, toastMsg);
+      });
     } else {
       fallbackCopy(text, toastMsg);
     }
@@ -491,29 +628,42 @@
     ta.style.left = '-9999px';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); showToast(toastMsg); } catch (e) { showToast('복사에 실패했습니다'); }
+    try {
+      document.execCommand('copy');
+      showToast(toastMsg);
+    } catch (e) {
+      showToast('복사에 실패했습니다');
+    }
     document.body.removeChild(ta);
   }
 
-  /* ── Scroll Animations ── */
+  /* ── Scroll Animations (IntersectionObserver) ── */
   let scrollObserver = null;
+
   function initScrollAnimations() {
     const targets = $$('.anim-target, .gallery__item, .story__img-card');
     if (!targets.length) return;
-    scrollObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          scrollObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+    scrollObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            scrollObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+    );
+
     targets.forEach((el) => scrollObserver.observe(el));
   }
 
+  // Re-observe dynamically added elements after async image loading
   function observeNewElements(container) {
     if (!scrollObserver) return;
-    $$('.gallery__item, .story__img-card', container).forEach((el) => scrollObserver.observe(el));
+    const targets = $$('.gallery__item, .story__img-card', container);
+    targets.forEach((el) => scrollObserver.observe(el));
   }
 
   /* ── Falling Petals ── */
@@ -523,58 +673,105 @@
     const ctx = canvas.getContext('2d');
     let W, H;
     const petals = [];
-    const petalColors = ['rgba(183, 110, 121, 0.5)', 'rgba(212, 160, 168, 0.45)', 'rgba(245, 190, 195, 0.4)', 'rgba(240, 180, 170, 0.35)', 'rgba(200, 140, 150, 0.4)'];
+    const PETAL_COUNT = 25;
 
-    function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+    const petalColors = [
+      'rgba(183, 110, 121, 0.5)',
+      'rgba(212, 160, 168, 0.45)',
+      'rgba(245, 190, 195, 0.4)',
+      'rgba(240, 180, 170, 0.35)',
+      'rgba(200, 140, 150, 0.4)',
+    ];
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+
     function createPetal() {
       return {
-        x: Math.random() * W, y: -20 - Math.random() * H * 0.3,
-        size: 6 + Math.random() * 10, speedY: 0.4 + Math.random() * 0.8, speedX: -0.3 + Math.random() * 0.6,
-        rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.03,
-        wobble: Math.random() * Math.PI * 2, wobbleSpeed: 0.01 + Math.random() * 0.02,
-        color: petalColors[Math.floor(Math.random() * petalColors.length)], opacity: 0.3 + Math.random() * 0.4,
+        x: Math.random() * W,
+        y: -20 - Math.random() * H * 0.3,
+        size: 6 + Math.random() * 10,
+        speedY: 0.4 + Math.random() * 0.8,
+        speedX: -0.3 + Math.random() * 0.6,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.03,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.01 + Math.random() * 0.02,
+        color: petalColors[Math.floor(Math.random() * petalColors.length)],
+        opacity: 0.3 + Math.random() * 0.4,
       };
     }
+
     function drawPetal(p) {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rotation); ctx.globalAlpha = p.opacity; ctx.fillStyle = p.color;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.globalAlpha = p.opacity;
+      ctx.fillStyle = p.color;
+
+      // Petal shape
       ctx.beginPath();
       const s = p.size;
-      ctx.moveTo(0, 0); ctx.bezierCurveTo(s * 0.3, -s * 0.4, s * 0.8, -s * 0.3, s * 0.5, 0); ctx.bezierCurveTo(s * 0.8, s * 0.3, s * 0.3, s * 0.4, 0, 0); ctx.fill();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(s * 0.3, -s * 0.4, s * 0.8, -s * 0.3, s * 0.5, 0);
+      ctx.bezierCurveTo(s * 0.8, s * 0.3, s * 0.3, s * 0.4, 0, 0);
+      ctx.fill();
+
       ctx.restore();
     }
+
     function animate() {
       ctx.clearRect(0, 0, W, H);
       petals.forEach((p) => {
-        p.wobble += p.wobbleSpeed; p.x += p.speedX + Math.sin(p.wobble) * 0.5; p.y += p.speedY; p.rotation += p.rotSpeed;
-        if (p.y > H + 20) { p.y = -20; p.x = Math.random() * W; }
-        if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
+        p.wobble += p.wobbleSpeed;
+        p.x += p.speedX + Math.sin(p.wobble) * 0.5;
+        p.y += p.speedY;
+        p.rotation += p.rotSpeed;
+
+        if (p.y > H + 20) {
+          p.y = -20;
+          p.x = Math.random() * W;
+        }
+        if (p.x < -20) p.x = W + 20;
+        if (p.x > W + 20) p.x = -20;
+
         drawPetal(p);
       });
       requestAnimationFrame(animate);
     }
-    resize(); window.addEventListener('resize', resize);
-    for (let i = 0; i < 25; i++) petals.push(createPetal());
+
+    resize();
+    window.addEventListener('resize', resize);
+    for (let i = 0; i < PETAL_COUNT; i++) {
+      petals.push(createPetal());
+    }
     animate();
   }
 
   /* ── Init ── */
   async function init() {
-    initPreventZoom();
+    initPreventZoom(); // 모바일 강제 확대 방지 (뷰어 내부는 허용) 실행
+
+    // Synchronous inits (no image dependency)
     initMeta();
     initCurtain();
+    initHero();
     initCountdown();
     initGreeting();
     initCalendar();
     initViewer();
+    initLocation();
     initAccount();
 
+    // Delay scroll animations so they don't fire during curtain
     setTimeout(initScrollAnimations, 200);
 
+    // Async inits (discover images, then render)
     await Promise.all([
-      initHero(),
-      initLocation(),
       initStory(),
-      initGallery()
+      initGallery(),
     ]);
   }
 
