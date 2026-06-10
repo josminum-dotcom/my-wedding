@@ -2,10 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="format-detection" content="telephone=no" />
 
-  <!-- OG Meta (동적으로 config에서 채워짐) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" id="og-title" content="" />
   <meta property="og:description" id="og-description" content="" />
@@ -13,7 +12,6 @@
 
   <title id="page-title">모바일 청첩장</title>
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -25,7 +23,6 @@
 </head>
 <body>
 
-  <!-- ========== Curtain / Veil Opening ========== -->
   <div class="curtain" id="curtain">
     <div class="curtain__left"></div>
     <div class="curtain__right"></div>
@@ -36,20 +33,16 @@
     </div>
   </div>
 
-  <!-- ========== Falling Petals Canvas ========== -->
   <canvas id="petals-canvas"></canvas>
 
-  <!-- ========== Toast ========== -->
   <div class="toast" id="toast"></div>
 
-  <!-- ========== Main ========== -->
   <main class="invitation">
 
-    <!-- ── Hero Section ── -->
     <section class="section hero" id="hero">
       <div class="floral-frame">
         <div class="hero__photo-wrap">
-          <img id="hero-img" src="" alt="웨딩 사진" loading="lazy" />
+          <img id="hero-img" src="" alt="웨딩 사진" loading="lazy" decoding="async" />
         </div>
       </div>
       <div class="hero__info anim-target">
@@ -58,7 +51,6 @@
         <p class="hero__date" id="hero-date"></p>
         <p class="hero__venue" id="hero-venue"></p>
       </div>
-      <!-- Countdown -->
       <div class="countdown anim-target" id="countdown">
         <div class="countdown__item">
           <span class="countdown__num" id="cd-days">0</span>
@@ -80,7 +72,6 @@
       <div class="floral-divider"></div>
     </section>
 
-    <!-- ── Greeting Section ── -->
     <section class="section greeting" id="greeting">
       <div class="section__inner anim-target">
         <h2 class="section__title script-font" id="greeting-title"></h2>
@@ -90,7 +81,6 @@
       <div class="floral-divider"></div>
     </section>
 
-    <!-- ── Calendar Section ── -->
     <section class="section calendar-section" id="calendar-section">
       <div class="section__inner anim-target">
         <h2 class="section__title script-font">Wedding Day</h2>
@@ -109,7 +99,6 @@
       <div class="floral-divider"></div>
     </section>
 
-    <!-- ── Our Story ── -->
     <section class="section story" id="story">
       <div class="section__inner anim-target">
         <h2 class="section__title script-font" id="story-title"></h2>
@@ -119,7 +108,6 @@
       <div class="floral-divider"></div>
     </section>
 
-    <!-- ── Gallery ── -->
     <section class="section gallery" id="gallery">
       <div class="section__inner anim-target">
         <h2 class="section__title script-font">Gallery</h2>
@@ -128,7 +116,6 @@
       <div class="floral-divider"></div>
     </section>
 
-    <!-- ── Location ── -->
     <section class="section location" id="location">
       <div class="section__inner anim-target">
         <h2 class="section__title script-font">Location</h2>
@@ -137,7 +124,7 @@
         <p class="location__address" id="loc-address"></p>
         <p class="location__tel" id="loc-tel"></p>
         <div class="location__map-wrap">
-          <img id="loc-map-img" src="" alt="오시는 길" loading="lazy" />
+          <img id="loc-map-img" src="" alt="오시는 길" loading="lazy" decoding="async" />
         </div>
         <div class="location__buttons">
           <button class="btn btn--rose" id="btn-copy-address">
@@ -155,13 +142,11 @@
       <div class="floral-divider"></div>
     </section>
 
-    <!-- ── Account (축의금) ── -->
     <section class="section account" id="account">
       <div class="section__inner anim-target">
         <h2 class="section__title script-font">Celebration</h2>
         <p class="account__subtitle">축하의 마음을 전해주세요</p>
 
-        <!-- 신랑측 -->
         <div class="accordion" id="acc-groom">
           <button class="accordion__toggle" data-target="acc-groom-body">
             <span>신랑측 계좌번호</span>
@@ -170,7 +155,6 @@
           <div class="accordion__body" id="acc-groom-body"></div>
         </div>
 
-        <!-- 신부측 -->
         <div class="accordion" id="acc-bride">
           <button class="accordion__toggle" data-target="acc-bride-body">
             <span>신부측 계좌번호</span>
@@ -181,14 +165,12 @@
       </div>
     </section>
 
-    <!-- ── Footer ── -->
     <footer class="footer">
       <p class="footer__text script-font">Thank you</p>
     </footer>
 
   </main>
 
-  <!-- ========== Photo Viewer Modal ========== -->
   <div class="viewer" id="viewer" aria-hidden="true">
     <div class="viewer__backdrop"></div>
     <button class="viewer__close" id="viewer-close" aria-label="닫기">
@@ -204,7 +186,6 @@
     </button>
   </div>
 
-  <!-- Scripts -->
   <script src="config.js"></script>
   <script src="script.js"></script>
 </body>

@@ -15,7 +15,6 @@
   }
 
   /* ── Image Auto-Detection ── */
-  // Discovered images stored here for use across functions
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -49,22 +48,14 @@
     });
   }
 
-  /* ── Prevent Zoom (확대 방지) ── */
+  /* ── Prevent Zoom (PC 웹 환경 키보드 확대 방지) ── */
   function initPreventZoom() {
-    // 1. 모바일 뷰포트 메타 태그를 동적으로 수정하여 핀치 줌 & 더블탭 확대 방지
-    const viewportMeta = document.querySelector('meta[name="viewport"]');
-    if (viewportMeta) {
-      viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
-    }
-
-    // 2. 데스크탑 웹 브라우저 확대 방지 (Ctrl + 마우스 휠)
     document.addEventListener('wheel', function (e) {
       if (e.ctrlKey) {
         e.preventDefault();
       }
     }, { passive: false });
 
-    // 3. 데스크탑 키보드 단축키 확대 방지 (Ctrl + '+', '-', '=')
     document.addEventListener('keydown', function (e) {
       if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=')) {
         e.preventDefault();
@@ -88,23 +79,15 @@
   /* ── Curtain ── */
   function initCurtain() {
     const curtain = $('#curtain');
-
-    // If useCurtain is false, skip the curtain entirely
     if (CONFIG.useCurtain === false) {
-      if (curtain) {
-        curtain.style.display = 'none';
-      }
-      // Start petals immediately since there's no curtain to open
+      if (curtain) curtain.style.display = 'none';
       initPetals();
       return;
     }
-
-    // Default behaviour (useCurtain is true or undefined for backwards compat)
     const names = $('#curtain-names');
     const btn = $('#curtain-open');
     if (names) {
-      names.textContent =
-        CONFIG.groom.fullName + ' & ' + CONFIG.bride.fullName;
+      names.textContent = CONFIG.groom.fullName + ' & ' + CONFIG.bride.fullName;
     }
     if (btn) {
       btn.addEventListener('click', () => {
@@ -190,9 +173,7 @@
       const b = CONFIG.bride;
 
       const makeName = (cfg, isDeceased) => {
-        return isDeceased
-          ? `<span class="deceased">${cfg}</span>`
-          : cfg;
+        return isDeceased ? `<span class="deceased">${cfg}</span>` : cfg;
       };
 
       parents.innerHTML = `
@@ -241,7 +222,6 @@
     html += '</div>';
     el.innerHTML = html;
 
-    // Google Calendar
     const gBtn = $('#btn-google-cal');
     if (gBtn) {
       gBtn.addEventListener('click', () => {
@@ -261,7 +241,6 @@
       });
     }
 
-    // Apple Calendar (.ics)
     const iBtn = $('#btn-ics-cal');
     if (iBtn) {
       iBtn.addEventListener('click', () => {
@@ -295,7 +274,7 @@
     }
   }
 
-  /* ── Story (async — waits for image discovery) ── */
+  /* ── Story ── */
   async function initStory() {
     const title = $('#story-title');
     const text = $('#story-text');
@@ -305,8 +284,6 @@
     if (text) text.textContent = CONFIG.story.content;
 
     if (!container) return;
-
-    // Show loading placeholder
     container.innerHTML = '<div class="section-loading"><span class="section-loading__dot"></span><span class="section-loading__dot"></span><span class="section-loading__dot"></span></div>';
 
     const storyImages = await loadImagesFromFolder('story');
@@ -316,31 +293,27 @@
         .map(
           (src) => `
         <div class="story__img-card anim-scale-target">
-          <img src="${src}" alt="우리의 이야기" loading="lazy" />
+          <img src="${src}" alt="우리의 이야기" loading="lazy" decoding="async" />
         </div>
       `
         )
         .join('');
-      // Re-observe new elements for scroll animations
       observeNewElements(container);
     } else {
       container.innerHTML = '';
     }
   }
 
-  /* ── Gallery (async — waits for image discovery) ── */
+  /* ── Gallery ── */
   async function initGallery() {
     const grid = $('#gallery-grid');
     const section = $('#gallery');
     if (!grid) return;
 
-    // Show loading placeholder
     grid.innerHTML = '<div class="section-loading"><span class="section-loading__dot"></span><span class="section-loading__dot"></span><span class="section-loading__dot"></span></div>';
-
     galleryImages = await loadImagesFromFolder('gallery');
 
     if (galleryImages.length === 0) {
-      // Hide entire gallery section if no images found
       if (section) section.style.display = 'none';
       return;
     }
@@ -349,7 +322,7 @@
       .map(
         (src, i) => `
       <div class="gallery__item" data-index="${i}">
-        <img src="${src}" alt="갤러리 사진 ${i + 1}" loading="lazy" />
+        <img src="${src}" alt="갤러리 사진 ${i + 1}" loading="lazy" decoding="async" />
       </div>
     `
       )
@@ -362,7 +335,6 @@
       }
     });
 
-    // Re-observe new elements for scroll animations
     observeNewElements(grid);
   }
 
@@ -378,14 +350,13 @@
     const track = $('#viewer-track');
     if (!viewer || !track || galleryImages.length === 0) return;
 
-    // 이미지가 아직 DOM에 렌더링되지 않았을 때 한 번만 그립니다.
-    // 기존의 loading="lazy" 속성은 가로 스크롤 환경에서 이미지가 안 나오는 버그를 유발하므로 제거했습니다.
+    // 모달 사진은 가로로 넘길 때 렌더링 오류가 나지 않도록 lazy 로딩 제거
     if (track.children.length === 0) {
       track.innerHTML = galleryImages
         .map(
           (src) => `
         <div class="viewer__slide">
-          <img src="${src}" alt="" />
+          <img src="${src}" alt="" decoding="async" />
         </div>
       `
         )
@@ -433,7 +404,6 @@
     $('#viewer-prev')?.addEventListener('click', () => goToSlide(viewerIdx - 1));
     $('#viewer-next')?.addEventListener('click', () => goToSlide(viewerIdx + 1));
 
-    // Keyboard
     document.addEventListener('keydown', (e) => {
       if (!viewer.classList.contains('is-active')) return;
       if (e.key === 'Escape') closeViewer();
@@ -441,7 +411,6 @@
       if (e.key === 'ArrowRight') goToSlide(viewerIdx + 1);
     });
 
-    // Touch/Swipe
     const track = $('#viewer-track');
     if (!track) return;
 
@@ -506,14 +475,9 @@
     const groomBody = $('#acc-groom-body');
     const brideBody = $('#acc-bride-body');
 
-    if (groomBody) {
-      groomBody.innerHTML = renderAccounts(CONFIG.accounts.groom);
-    }
-    if (brideBody) {
-      brideBody.innerHTML = renderAccounts(CONFIG.accounts.bride);
-    }
+    if (groomBody) groomBody.innerHTML = renderAccounts(CONFIG.accounts.groom);
+    if (brideBody) brideBody.innerHTML = renderAccounts(CONFIG.accounts.bride);
 
-    // Accordion toggle
     $$('.accordion__toggle').forEach((btn) => {
       btn.addEventListener('click', () => {
         const acc = btn.closest('.accordion');
@@ -521,7 +485,6 @@
       });
     });
 
-    // Copy account
     document.addEventListener('click', (e) => {
       const copyBtn = e.target.closest('.account-item__copy');
       if (copyBtn) {
@@ -592,7 +555,7 @@
     document.body.removeChild(ta);
   }
 
-  /* ── Scroll Animations (IntersectionObserver) ── */
+  /* ── Scroll Animations ── */
   let scrollObserver = null;
 
   function initScrollAnimations() {
@@ -614,7 +577,6 @@
     targets.forEach((el) => scrollObserver.observe(el));
   }
 
-  // Re-observe dynamically added elements after async image loading
   function observeNewElements(container) {
     if (!scrollObserver) return;
     const targets = $$('.gallery__item, .story__img-card', container);
@@ -666,7 +628,6 @@
       ctx.globalAlpha = p.opacity;
       ctx.fillStyle = p.color;
 
-      // Petal shape
       ctx.beginPath();
       const s = p.size;
       ctx.moveTo(0, 0);
@@ -707,10 +668,7 @@
 
   /* ── Init ── */
   async function init() {
-    // 확대 방지 적용
     initPreventZoom();
-    
-    // Synchronous inits (no image dependency)
     initMeta();
     initCurtain();
     initHero();
@@ -721,10 +679,8 @@
     initLocation();
     initAccount();
 
-    // Delay scroll animations so they don't fire during curtain
     setTimeout(initScrollAnimations, 200);
 
-    // Async inits (discover images, then render)
     await Promise.all([
       initStory(),
       initGallery(),
