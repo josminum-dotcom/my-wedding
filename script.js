@@ -14,7 +14,7 @@
     return String(n).padStart(2, '0');
   }
 
-  /* ── Image Auto-Detection ── */
+  /* ── Image Auto-Detection (JPG 전용 속도 최적화) ── */
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -48,7 +48,7 @@
     });
   }
 
-  /* ── Prevent Zoom ── */
+  /* ── Prevent Zoom (뷰어 외 모바일 강제 확대 완벽 차단) ── */
   function initPreventZoom() {
     document.addEventListener('wheel', function (e) {
       if (e.ctrlKey && !e.target.closest('.viewer')) {
@@ -91,7 +91,7 @@
     if (pt) pt.textContent = CONFIG.meta.title;
   }
 
-  /* ── Curtain ── */
+  /* ── Curtain & BGM Autoplay ── */
   function initCurtain() {
     const curtain = $('#curtain');
 
@@ -402,7 +402,7 @@
     observeNewElements(grid);
   }
 
-  /* ── Photo Viewer ── */
+  /* ── Photo Viewer (갤러리 퍼센트 단위 통일로 실종 방지 유지) ── */
   let viewerIdx = 0;
   let touchStartX = 0;
   let touchDeltaX = 0;
@@ -504,7 +504,7 @@
     });
   }
 
-  /* ── Location ── */
+  /* ── Location (약도 클릭 제거, 자체 큰 이미지 유지) ── */
   function initLocation() {
     const w = CONFIG.wedding;
     const venue = $('#loc-venue');
@@ -582,9 +582,9 @@
       .join('');
   }
 
-  /* ── Share (Kakao & Link) - kakaoShare 구조 반영 완료 ── */
+  /* ── Share (Kakao & Link - kakaoShare 동적 매핑 완벽 반영) ── */
   function initShare() {
-    // config.js의 kakaoShare 구조를 읽어옵니다.
+    // 사용자의 config.js에서 kakaoShare 설정을 불러옵니다.
     const shareConfig = typeof CONFIG.kakaoShare !== 'undefined' ? CONFIG.kakaoShare : {};
     
     if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
@@ -601,11 +601,11 @@
     if (btnKakao) {
       btnKakao.addEventListener('click', () => {
         if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
-          showToast('카카오톡 공유 설정(apiKey)이 누락되었습니다.');
+          showToast('카카오톡 공유가 설정되지 않았습니다.');
           return;
         }
         
-        // config.js에 입력하신 타이틀과 설명(description)을 최우선으로 반영합니다.
+        // config.js에 입력한 제목과 내용을 우선 적용하여 카카오톡 썸네일을 생성합니다.
         Kakao.Share.sendDefault({
           objectType: 'feed',
           content: {
