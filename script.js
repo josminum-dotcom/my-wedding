@@ -101,7 +101,6 @@
       }
       initPetals();
       
-      // 커튼이 없을 경우 화면을 한 번 터치했을 때 음악이 나오도록 설정
       document.body.addEventListener('click', function firstClick() {
         if(window.playBGM) window.playBGM();
         document.body.removeEventListener('click', firstClick);
@@ -123,7 +122,6 @@
         setTimeout(() => curtain.classList.add('is-hidden'), 1400);
         initPetals();
         
-        // 커튼 열기 버튼 클릭 시 BGM 자동 재생
         if(window.playBGM) window.playBGM();
       });
     }
@@ -152,7 +150,6 @@
 
     btn.addEventListener('click', toggleBGM);
 
-    // 전역 함수로 등록하여 커튼 클릭 시 호출할 수 있도록 함
     window.playBGM = () => {
       if(!isPlaying) {
         bgm.play().then(() => {
@@ -585,26 +582,35 @@
       .join('');
   }
 
-  /* ── Share (Kakao & Link) ── */
+  /* ── Share (Kakao & Link) - kakaoShare 구조 반영 완료 ── */
   function initShare() {
-    // config.js에 등록된 Kakao 앱 키를 사용해 초기화
-    if (typeof Kakao !== 'undefined' && !Kakao.isInitialized() && CONFIG.kakao && CONFIG.kakao.apiKey) {
-      Kakao.init(CONFIG.kakao.apiKey);
+    // config.js의 kakaoShare 구조를 읽어옵니다.
+    const shareConfig = typeof CONFIG.kakaoShare !== 'undefined' ? CONFIG.kakaoShare : {};
+    
+    if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
+      if (shareConfig.apiKey) {
+        try {
+          Kakao.init(shareConfig.apiKey);
+        } catch (e) {
+          console.error('카카오 API 초기화 실패:', e);
+        }
+      }
     }
 
     const btnKakao = $('#btn-kakao-share');
     if (btnKakao) {
       btnKakao.addEventListener('click', () => {
         if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
-          showToast('카카오톡 공유가 설정되지 않았습니다.');
+          showToast('카카오톡 공유 설정(apiKey)이 누락되었습니다.');
           return;
         }
         
+        // config.js에 입력하신 타이틀과 설명(description)을 최우선으로 반영합니다.
         Kakao.Share.sendDefault({
           objectType: 'feed',
           content: {
-            title: CONFIG.groom.name + ' & ' + CONFIG.bride.name + ' 결혼합니다',
-            description: '귀한 걸음 하시어 저희의 새 출발을 축복해 주세요.',
+            title: shareConfig.title || (CONFIG.groom.name + ' & ' + CONFIG.bride.name + ' 결혼합니다'),
+            description: shareConfig.description || '귀한 걸음 하시어 저희의 새 출발을 축복해 주세요.',
             imageUrl: 'https://raw.githubusercontent.com/josminum-dotcom/my-wedding/main/images/og/1.jpg',
             link: {
               mobileWebUrl: window.location.href,
@@ -790,7 +796,7 @@
     initPreventZoom(); 
     initMeta();
     initCurtain();
-    initBGM(); // 음악 초기화
+    initBGM(); 
     initHero();
     initCountdown();
     initGreeting();
@@ -798,7 +804,7 @@
     initViewer();
     initLocation();
     initAccount();
-    initShare(); // 카카오 및 URL 공유 초기화
+    initShare(); 
 
     setTimeout(initScrollAnimations, 200);
 
