@@ -100,6 +100,13 @@
         curtain.style.display = 'none';
       }
       initPetals();
+      
+      // 커튼이 없을 경우 화면을 한 번 터치했을 때 음악이 나오도록 설정
+      document.body.addEventListener('click', function firstClick() {
+        if(window.playBGM) window.playBGM();
+        document.body.removeEventListener('click', firstClick);
+      }, {once: true});
+
       return;
     }
 
@@ -115,9 +122,45 @@
         document.body.style.overflow = '';
         setTimeout(() => curtain.classList.add('is-hidden'), 1400);
         initPetals();
+        
+        // 커튼 열기 버튼 클릭 시 BGM 자동 재생
+        if(window.playBGM) window.playBGM();
       });
     }
     document.body.style.overflow = 'hidden';
+  }
+
+  /* ── BGM Control ── */
+  function initBGM() {
+    const bgm = $('#bgm');
+    const btn = $('#btn-bgm');
+    if(!bgm || !btn) return;
+
+    let isPlaying = false;
+    
+    const toggleBGM = () => {
+      if(isPlaying) {
+        bgm.pause();
+        btn.classList.remove('is-playing');
+      } else {
+        bgm.play().then(() => {
+          btn.classList.add('is-playing');
+        }).catch(()=>{});
+      }
+      isPlaying = !isPlaying;
+    };
+
+    btn.addEventListener('click', toggleBGM);
+
+    // 전역 함수로 등록하여 커튼 클릭 시 호출할 수 있도록 함
+    window.playBGM = () => {
+      if(!isPlaying) {
+        bgm.play().then(() => {
+          isPlaying = true;
+          btn.classList.add('is-playing');
+        }).catch(()=>{});
+      }
+    };
   }
 
   /* ── Hero ── */
@@ -362,7 +405,7 @@
     observeNewElements(grid);
   }
 
-  /* ── Photo Viewer (갤러리 단위 퍼센트(%) 통일로 실종 버그 해결) ── */
+  /* ── Photo Viewer ── */
   let viewerIdx = 0;
   let touchStartX = 0;
   let touchDeltaX = 0;
@@ -445,7 +488,6 @@
     track.addEventListener('touchmove', (e) => {
       if (!isSwiping) return;
       touchDeltaX = e.touches[0].clientX - touchStartX;
-      // 스와이프 계산도 px가 아닌 %로 통일하여 이미지 어긋남 원천 차단
       const percentX = (touchDeltaX / window.innerWidth) * 100;
       const offset = -(viewerIdx * 100) + percentX;
       track.style.transform = `translateX(${offset}%)`;
@@ -465,7 +507,7 @@
     });
   }
 
-  /* ── Location (약도 뷰어 클릭 제거) ── */
+  /* ── Location ── */
   function initLocation() {
     const w = CONFIG.wedding;
     const venue = $('#loc-venue');
@@ -479,7 +521,6 @@
     if (addr) addr.textContent = w.address;
     if (tel) tel.textContent = `Tel. ${w.tel}`;
     
-    // 약도 클릭시 모달이 뜨는 기능 삭제. 이미지 로드만 유지
     if (mapImg) {
       mapImg.src = 'images/location/1.jpg';
     }
@@ -542,6 +583,53 @@
     `
       )
       .join('');
+  }
+
+  /* ── Share (Kakao & Link) ── */
+  function initShare() {
+    // config.js에 등록된 Kakao 앱 키를 사용해 초기화
+    if (typeof Kakao !== 'undefined' && !Kakao.isInitialized() && CONFIG.kakao && CONFIG.kakao.apiKey) {
+      Kakao.init(CONFIG.kakao.apiKey);
+    }
+
+    const btnKakao = $('#btn-kakao-share');
+    if (btnKakao) {
+      btnKakao.addEventListener('click', () => {
+        if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
+          showToast('카카오톡 공유가 설정되지 않았습니다.');
+          return;
+        }
+        
+        Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: CONFIG.groom.name + ' & ' + CONFIG.bride.name + ' 결혼합니다',
+            description: '귀한 걸음 하시어 저희의 새 출발을 축복해 주세요.',
+            imageUrl: 'https://raw.githubusercontent.com/josminum-dotcom/my-wedding/main/images/og/1.jpg',
+            link: {
+              mobileWebUrl: window.location.href,
+              webUrl: window.location.href,
+            },
+          },
+          buttons: [
+            {
+              title: '청첩장 보기',
+              link: {
+                mobileWebUrl: window.location.href,
+                webUrl: window.location.href,
+              },
+            },
+          ],
+        });
+      });
+    }
+
+    const btnLink = $('#btn-link-share');
+    if (btnLink) {
+      btnLink.addEventListener('click', () => {
+        copyToClipboard(window.location.href, '청첩장 주소가 복사되었습니다.');
+      });
+    }
   }
 
   /* ── Toast ── */
@@ -702,6 +790,7 @@
     initPreventZoom(); 
     initMeta();
     initCurtain();
+    initBGM(); // 음악 초기화
     initHero();
     initCountdown();
     initGreeting();
@@ -709,6 +798,7 @@
     initViewer();
     initLocation();
     initAccount();
+    initShare(); // 카카오 및 URL 공유 초기화
 
     setTimeout(initScrollAnimations, 200);
 
