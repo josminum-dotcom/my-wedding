@@ -14,7 +14,7 @@
     return String(n).padStart(2, '0');
   }
 
-  /* ── Image Auto-Detection (JPG 전용 속도 최적화) ── */
+  /* ── Image Auto-Detection ── */
   let galleryImages = [];
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
@@ -48,7 +48,7 @@
     });
   }
 
-  /* ── Prevent Zoom (뷰어 외 모바일 강제 확대 완벽 차단) ── */
+  /* ── Prevent Zoom ── */
   function initPreventZoom() {
     document.addEventListener('wheel', function (e) {
       if (e.ctrlKey && !e.target.closest('.viewer')) {
@@ -402,7 +402,7 @@
     observeNewElements(grid);
   }
 
-  /* ── Photo Viewer (갤러리 퍼센트 단위 통일로 실종 방지 유지) ── */
+  /* ── Photo Viewer ── */
   let viewerIdx = 0;
   let touchStartX = 0;
   let touchDeltaX = 0;
@@ -504,7 +504,7 @@
     });
   }
 
-  /* ── Location (약도 클릭 제거, 자체 큰 이미지 유지) ── */
+  /* ── Location ── */
   function initLocation() {
     const w = CONFIG.wedding;
     const venue = $('#loc-venue');
@@ -582,54 +582,8 @@
       .join('');
   }
 
-  /* ── Share (Kakao & Link - kakaoShare 동적 매핑 완벽 반영) ── */
+  /* ── Share (URL 복사만 유지) ── */
   function initShare() {
-    // 사용자의 config.js에서 kakaoShare 설정을 불러옵니다.
-    const shareConfig = typeof CONFIG.kakaoShare !== 'undefined' ? CONFIG.kakaoShare : {};
-    
-    if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
-      if (shareConfig.apiKey) {
-        try {
-          Kakao.init(shareConfig.apiKey);
-        } catch (e) {
-          console.error('카카오 API 초기화 실패:', e);
-        }
-      }
-    }
-
-    const btnKakao = $('#btn-kakao-share');
-    if (btnKakao) {
-      btnKakao.addEventListener('click', () => {
-        if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
-          showToast('카카오톡 공유가 설정되지 않았습니다.');
-          return;
-        }
-        
-        // config.js에 입력한 제목과 내용을 우선 적용하여 카카오톡 썸네일을 생성합니다.
-        Kakao.Share.sendDefault({
-          objectType: 'feed',
-          content: {
-            title: shareConfig.title || (CONFIG.groom.name + ' & ' + CONFIG.bride.name + ' 결혼합니다'),
-            description: shareConfig.description || '귀한 걸음 하시어 저희의 새 출발을 축복해 주세요.',
-            imageUrl: 'https://raw.githubusercontent.com/josminum-dotcom/my-wedding/main/images/og/1.jpg',
-            link: {
-              mobileWebUrl: window.location.href,
-              webUrl: window.location.href,
-            },
-          },
-          buttons: [
-            {
-              title: '청첩장 보기',
-              link: {
-                mobileWebUrl: window.location.href,
-                webUrl: window.location.href,
-              },
-            },
-          ],
-        });
-      });
-    }
-
     const btnLink = $('#btn-link-share');
     if (btnLink) {
       btnLink.addEventListener('click', () => {
