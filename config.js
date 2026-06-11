@@ -81,7 +81,7 @@ const CONFIG = {
   // ── 링크 공유 시 나타나는 문구 ──
   kakaoShare: {
     // Kakao Developers 앱키 (JavaScript 키)
-    appKey: "1482351",
+    appKey: "a3a172d821ff5560e8970590d4e47a89",
     title: "조만제 ♥ 유지혜 결혼합니다",
     description: "2026년 7월 18일 토요일 오후 12시 20분, 주안 CN웨딩홀\n",
   },
